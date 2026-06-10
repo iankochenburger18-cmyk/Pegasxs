@@ -357,7 +357,7 @@ export default function HomePage() {
           <div className="foot-mega">Pegasxs</div>
           <div className="foot-bottom">
             <div>© 2026 Pegasxs Studio — Made with <em style={{ color: "var(--ink)" }}>care</em>, in Zurich, Switzerland.</div>
-            <div className="right"><a href="#">Privacy</a><a href="/terms">Terms</a><a href="#">Status</a><a href="#">Twitter</a></div>
+            <div className="right"><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="#">Status</a><a href="#">Twitter</a></div>
           </div>
         </div>
       </footer>
