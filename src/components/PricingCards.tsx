@@ -120,7 +120,7 @@ export function ProPlanCard() {
     <PricingCard
       plan="pro"
       title="Pro Plan -"
-      price="$29.95/mo"
+      price="$35/mo"
       glowColor="40 80 80"
       bulletItems={["Professional Grade Videos", "Fully Automated Workflow", "Time Savings (Hours → Minutes)", "Instant Download and Ownership", "50 renders per week"]}
     />

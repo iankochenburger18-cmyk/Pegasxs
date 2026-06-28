@@ -1,20 +1,11 @@
 "use client"
 import Nav from "@/components/Nav"
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 
 export default function HomePage() {
-  const progRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     const preload = document.getElementById("preload")
     const timer = setTimeout(() => { if (preload) preload.classList.add("gone") }, 1500)
-
-    const handleScroll = () => {
-      const h = document.documentElement
-      const p = h.scrollTop / (h.scrollHeight - h.clientHeight)
-      if (progRef.current) progRef.current.style.width = (p * 100) + "%"
-    }
-    window.addEventListener("scroll", handleScroll)
 
     const io = new IntersectionObserver((entries) => {
       entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target) } })
@@ -87,7 +78,6 @@ export default function HomePage() {
 
     return () => {
       clearTimeout(timer)
-      window.removeEventListener("scroll", handleScroll)
       window.removeEventListener("scroll", handleParallax)
     }
   }, [])
@@ -110,7 +100,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div ref={progRef} className="progress" id="prog"></div>
       <Nav />
 
       <section className="hero" id="top">
@@ -258,8 +247,7 @@ export default function HomePage() {
         <div className="wrap">
           <p className="quote-text reveal">&ldquo;Pegasxs is the first tool that <em>doesn&apos;t</em> feel like a tool. It feels like a quieter version of the work.&rdquo;</p>
           <div className="quote-meta reveal">
-            <div className="ava">M</div>
-            <div><strong>Mira Hessen</strong> — Design Director, Linear<br /><span style={{ fontSize: 13, color: "var(--ink-mute)" }}>Switched from After Effects in Q3 2025</span></div>
+            <div>&minus; Just straight facts</div>
           </div>
         </div>
       </section>
@@ -273,12 +261,11 @@ export default function HomePage() {
           <div className="pricing-grid">
             <div className="plan reveal">
               <div className="plan-top"><div className="plan-name">Pro</div></div>
-              <div className="price">$29<span className="cents">.95</span><em> / mo</em></div>
+              <div className="price">$35<em> / mo</em></div>
               <p className="tag">For working creators. <em>The standard.</em></p>
               <ul>
                 <li><em>50</em> renders / week</li>
                 <li>4K MP4 · ProRes export</li>
-                <li>Lottie &amp; SVG export</li>
                 <li>Cinema palettes &amp; presets</li>
                 <li>Private project library</li>
                 <li>~<em>$0.15</em> avg per video</li>
@@ -293,9 +280,8 @@ export default function HomePage() {
                 <li><em>Unlimited</em> renders</li>
                 <li>No weekly cap</li>
                 <li>Priority GPU queue</li>
-                <li>4K, ProRes, Lottie, SVG</li>
+                <li>4K MP4 export</li>
                 <li>Brand kits &amp; team libraries</li>
-                <li>API &amp; webhooks</li>
                 <li>Dedicated success partner</li>
               </ul>
               <a href="/signup" className="btn">Upgrade to Max <span className="arrow">→</span></a>
