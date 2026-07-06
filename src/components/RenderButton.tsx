@@ -5,6 +5,199 @@ import { supabase } from "@/lib/supabaseClient"
 const MAX_IMAGES = 5
 const MAX_FILE_SIZE_MB = 5
 
+// Cosmetic status steps shown while rendering — purely visual, fake timing
+const STATUS_STEPS = [
+  { label: "Thinking...", duration: 4000 },
+  { label: "Researching your niche...", duration: 6000 },
+  { label: "Writing design brief...", duration: 8000 },
+  { label: "Generating HTML & animations...", duration: 30000 },
+  { label: "Capturing frames...", duration: 25000 },
+  { label: "Encoding video...", duration: 8000 },
+]
+
+type ChatMessage =
+  | { type: "user"; text: string; id: string }
+  | { type: "status"; steps: string[]; activeStep: number; done: boolean; id: string }
+  | { type: "video"; renderId: string | number; signedUrl: string | null; id: string }
+  | { type: "error"; text: string; id: string }
+
+function uid() {
+  return Math.random().toString(36).slice(2, 10)
+}
+
+// ─── Typing dots indicator ────────────────────────────────────────────────────
+function TypingDots() {
+  return (
+    <span style={{ display: "inline-flex", gap: 3, alignItems: "center", height: 16 }}>
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          style={{
+            width: 5, height: 5, borderRadius: "50%",
+            background: "var(--ink-mute)",
+            display: "inline-block",
+            animation: `pegasxs-dot-bounce 1.2s ease-in-out ${i * 0.2}s infinite`,
+          }}
+        />
+      ))}
+    </span>
+  )
+}
+
+// ─── Video bubble ─────────────────────────────────────────────────────────────
+function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signedUrl: string | null }) {
+  const [url, setUrl] = React.useState<string | null>(signedUrl)
+  const [loading, setLoading] = React.useState(!signedUrl)
+  const [playing, setPlaying] = React.useState(false)
+  const [downloading, setDownloading] = React.useState(false)
+  const videoRef = React.useRef<HTMLVideoElement>(null)
+
+  React.useEffect(() => {
+    if (url) return
+    // Fetch signed URL if not already available
+    async function fetchUrl() {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const token = sessionData.session?.access_token
+        if (!token) return
+        const res = await fetch("https://api.pegasxs.com/get-render-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ render_id: renderId }),
+        })
+        const data = await res.json()
+        if (data.render?.video_path) {
+          const urlRes = await fetch("https://api.pegasxs.com/get-video-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ video_path: data.render.video_path }),
+          })
+          const urlData = await urlRes.json()
+          if (urlData.signedUrl) setUrl(urlData.signedUrl)
+        }
+      } catch {}
+      setLoading(false)
+    }
+    fetchUrl()
+  }, [renderId, url])
+
+  async function handleDownload() {
+    if (!url || downloading) return
+    setDownloading(true)
+    try {
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const a = document.createElement("a")
+      a.href = URL.createObjectURL(blob)
+      a.download = `pegasxs-${renderId}.mp4`
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } catch {}
+    setDownloading(false)
+  }
+
+  if (loading) {
+    return (
+      <div style={{ width: 180, height: 100, borderRadius: 12, background: "var(--paper-deep)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <TypingDots />
+      </div>
+    )
+  }
+
+  if (!url) {
+    return (
+      <div style={{ fontSize: 13, color: "var(--ink-soft)", fontFamily: "Inter, sans-serif" }}>
+        Video unavailable
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* Video player */}
+      <div style={{
+        position: "relative", borderRadius: 14, overflow: "hidden",
+        background: "#000", width: 200,
+        boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+        cursor: "pointer",
+      }}
+        onClick={() => {
+          setPlaying(!playing)
+          if (videoRef.current) {
+            playing ? videoRef.current.pause() : videoRef.current.play()
+          }
+        }}
+      >
+        <video
+          ref={videoRef}
+          src={url}
+          style={{ width: "100%", display: "block", borderRadius: 14 }}
+          playsInline
+          loop
+          onEnded={() => setPlaying(false)}
+        />
+        {/* Play overlay when paused */}
+        {!playing && (
+          <div style={{
+            position: "absolute", inset: 0, display: "flex",
+            alignItems: "center", justifyContent: "center",
+            background: "rgba(0,0,0,0.35)",
+            borderRadius: 14,
+          }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: "50%",
+              background: "rgba(255,255,255,0.92)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#000">
+                <path d="M5 3l14 9-14 9V3z" />
+              </svg>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Download button */}
+      <button
+        onClick={handleDownload}
+        disabled={downloading}
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          background: "none", border: "1px solid var(--line-strong)",
+          borderRadius: 999, padding: "5px 12px",
+          cursor: downloading ? "default" : "pointer",
+          color: "var(--ink-soft)", fontFamily: "Inter, sans-serif",
+          fontSize: 12, width: "fit-content",
+          opacity: downloading ? 0.5 : 1, transition: "opacity 0.2s",
+        }}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        {downloading ? "Downloading..." : "Download"}
+      </button>
+    </div>
+  )
+}
+
+// ─── Pegasxs avatar ──────────────────────────────────────────────────────────
+function PegasxsAvatar() {
+  return (
+    <div style={{
+      width: 28, height: 28, borderRadius: "50%",
+      background: "var(--ink)", color: "var(--paper)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: 11, fontFamily: "Inter, sans-serif", fontWeight: 700,
+      flexShrink: 0, marginTop: 2,
+    }}>
+      P
+    </div>
+  )
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 export default function RenderButton() {
   const [script, setScript] = React.useState("")
   const [loading, setLoading] = React.useState(false)
@@ -13,42 +206,110 @@ export default function RenderButton() {
   const [uploading, setUploading] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const textareaRef = React.useRef<HTMLTextAreaElement>(null)
+  const chatBottomRef = React.useRef<HTMLDivElement>(null)
 
-  // Adjust mode — set when a render completes
   const [adjustMode, setAdjustMode] = React.useState(false)
   const [lastRenderId, setLastRenderId] = React.useState<string | number | null>(null)
-  // Use refs so event handlers always see latest values
   const lastRenderIdRef = React.useRef<string | number | null>(null)
   const adjustModeRef = React.useRef(false)
 
-  // Keep refs in sync with state
+  // Chat messages — session-only, cleared on unmount
+  const [messages, setMessages] = React.useState<ChatMessage[]>([])
+  const [showGreeting, setShowGreeting] = React.useState(true)
+
+  // Status step animation
+  const statusTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const activeStatusIdRef = React.useRef<string | null>(null)
+
   React.useEffect(() => { lastRenderIdRef.current = lastRenderId }, [lastRenderId])
   React.useEffect(() => { adjustModeRef.current = adjustMode }, [adjustMode])
 
-  function autoResize() {
-    const el = textareaRef.current
-    if (!el) return
-    el.style.height = "26px"
-    el.style.height = Math.min(el.scrollHeight, 200) + "px"
+  // Scroll to bottom whenever messages change
+  React.useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
+  // Clear everything on unmount (user leaves the page)
+  React.useEffect(() => {
+    return () => {
+      if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
+    }
+  }, [])
+
+  // Advance status steps cosmetically
+  function startStatusAnimation(msgId: string) {
+    activeStatusIdRef.current = msgId
+    let stepIndex = 0
+
+    function advance() {
+      if (activeStatusIdRef.current !== msgId) return
+      stepIndex++
+      if (stepIndex >= STATUS_STEPS.length) return
+
+      setMessages((prev) => prev.map((m) =>
+        m.id === msgId && m.type === "status"
+          ? { ...m, activeStep: stepIndex }
+          : m
+      ))
+
+      statusTimerRef.current = setTimeout(advance, STATUS_STEPS[stepIndex].duration)
+    }
+
+    statusTimerRef.current = setTimeout(advance, STATUS_STEPS[0].duration)
+  }
+
+  function stopStatusAnimation(msgId: string, done: boolean) {
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
+    activeStatusIdRef.current = null
+    setMessages((prev) => prev.map((m) =>
+      m.id === msgId && m.type === "status"
+        ? { ...m, done }
+        : m
+    ))
   }
 
   // Listen for render events
   React.useEffect(() => {
-    function handleRenderDone() {
+    function handleRenderDone(e: Event) {
+      const ce = e as CustomEvent<{ render_id: string | number; video_path?: string }>
+      const renderId = ce.detail?.render_id
+
+      // Stop status animation
+      const statusMsg = activeStatusIdRef.current
+      if (statusMsg) stopStatusAnimation(statusMsg, true)
+
       setLoading(false)
       setMessage("")
-      setAdjustMode(true)  // switch to adjust mode on completion
+      setAdjustMode(true)
+
+      // Add video bubble to chat
+      if (renderId) {
+        setMessages((prev) => [
+          ...prev,
+          { type: "video", renderId, signedUrl: null, id: uid() },
+        ])
+      }
     }
+
     function handleRenderFailed() {
+      const statusMsg = activeStatusIdRef.current
+      if (statusMsg) stopStatusAnimation(statusMsg, false)
+
       setLoading(false)
-      setMessage("Render failed. Please try again.")
+      setMessage("")
       setAdjustMode(false)
+      setMessages((prev) => [
+        ...prev,
+        { type: "error", text: "Something went wrong. Please try again.", id: uid() },
+      ])
     }
+
     function handleRenderStarted(e: Event) {
       const ce = e as CustomEvent<{ render_id: string | number }>
       if (ce.detail?.render_id) setLastRenderId(ce.detail.render_id)
       setAdjustMode(false)
     }
+
     window.addEventListener("pegasxs-render-done", handleRenderDone)
     window.addEventListener("pegasxs-render-failed", handleRenderFailed)
     window.addEventListener("pegasxs-render-started", handleRenderStarted)
@@ -58,6 +319,13 @@ export default function RenderButton() {
       window.removeEventListener("pegasxs-render-started", handleRenderStarted)
     }
   }, [])
+
+  function autoResize() {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = "26px"
+    el.style.height = Math.min(el.scrollHeight, 200) + "px"
+  }
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
@@ -95,7 +363,6 @@ export default function RenderButton() {
     setUploadedImages((prev) => prev.filter((_, i) => i !== index))
   }
 
-  // Adjust submit — sends to /render-v3-adjust
   async function handleAdjust() {
     const cleanScript = script.trim()
     if (!cleanScript) { setMessage("Describe what you want to change."); return }
@@ -103,6 +370,22 @@ export default function RenderButton() {
     if (!renderId) { setMessage("No video to adjust."); return }
 
     setLoading(true); setMessage("")
+    setShowGreeting(false)
+
+    // Add user message
+    setMessages((prev) => [...prev, { type: "user", text: cleanScript, id: uid() }])
+
+    // Add status message
+    const statusId = uid()
+    setMessages((prev) => [...prev, {
+      type: "status",
+      steps: STATUS_STEPS.map((s) => s.label),
+      activeStep: 0,
+      done: false,
+      id: statusId,
+    }])
+    startStatusAnimation(statusId)
+
     try {
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData.session?.access_token
@@ -111,58 +394,83 @@ export default function RenderButton() {
       const response = await fetch("https://api.pegasxs.com/render-v3-adjust", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          original_render_id: renderId,
-          adjust_prompt: cleanScript,
-        }),
+        body: JSON.stringify({ original_render_id: renderId, adjust_prompt: cleanScript }),
       })
-
       const result = await response.json()
 
       if (response.status === 429 && result.limitReached) {
-        setMessage(result.error || "Weekly render limit reached.")
+        stopStatusAnimation(statusId, false)
+        setMessages((prev) => [...prev, { type: "error", text: result.error || "Weekly render limit reached.", id: uid() }])
         setLoading(false); return
       }
-
       if (!response.ok || !result.render_id) {
-        setMessage(result.error || "Adjustment failed.")
+        stopStatusAnimation(statusId, false)
+        setMessages((prev) => [...prev, { type: "error", text: result.error || "Adjustment failed.", id: uid() }])
         setLoading(false); return
       }
 
       window.dispatchEvent(new CustomEvent("pegasxs-render-started", { detail: { render_id: result.render_id } }))
-      setMessage("Rendering adjustment...")
       setScript("")
       if (textareaRef.current) textareaRef.current.style.height = "26px"
     } catch (err: any) {
-      setMessage(err?.message || "Unknown error")
+      stopStatusAnimation(statusId, false)
+      setMessages((prev) => [...prev, { type: "error", text: err?.message || "Unknown error", id: uid() }])
       setLoading(false)
     }
   }
 
-  // New render submit
   async function handleNewRender() {
-    setLoading(true); setMessage("")
-    try {
-      const cleanScript = script.trim()
-      if (!cleanScript) { setMessage("Please enter a script first."); setLoading(false); return }
+    const cleanScript = script.trim()
+    if (!cleanScript) { setMessage("Please enter a script first."); return }
 
+    setLoading(true); setMessage("")
+    setShowGreeting(false)
+
+    // Add user message to chat
+    setMessages((prev) => [...prev, { type: "user", text: cleanScript, id: uid() }])
+
+    // Add status message immediately
+    const statusId = uid()
+    setMessages((prev) => [...prev, {
+      type: "status",
+      steps: STATUS_STEPS.map((s) => s.label),
+      activeStep: 0,
+      done: false,
+      id: statusId,
+    }])
+    startStatusAnimation(statusId)
+
+    try {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError) { setMessage("Session error: " + sessionError.message); setLoading(false); return }
+      if (sessionError) {
+        stopStatusAnimation(statusId, false)
+        setMessages((prev) => [...prev, { type: "error", text: "Session error: " + sessionError.message, id: uid() }])
+        setLoading(false); return
+      }
 
       const token = sessionData.session?.access_token
       const user = sessionData.session?.user
-      if (!token || !user) { setMessage("You must be logged in."); setLoading(false); return }
+      if (!token || !user) {
+        stopStatusAnimation(statusId, false)
+        setMessages((prev) => [...prev, { type: "error", text: "You must be logged in.", id: uid() }])
+        setLoading(false); return
+      }
 
       const { data: subscription, error: subError } = await supabase
         .from("subscriptions").select("subscription_status, trial_ends_at").eq("user_id", user.id).single()
-      if (subError || !subscription) { setMessage("No subscription record found."); setLoading(false); return }
+      if (subError || !subscription) {
+        stopStatusAnimation(statusId, false)
+        setMessages((prev) => [...prev, { type: "error", text: "No subscription record found.", id: uid() }])
+        setLoading(false); return
+      }
 
       const now = new Date()
       const trialEndsAt = subscription.trial_ends_at ? new Date(subscription.trial_ends_at) : null
       const hasActiveSubscription = subscription.subscription_status === "active"
       const hasActiveTrial = trialEndsAt !== null && trialEndsAt > now
       if (!hasActiveSubscription && !hasActiveTrial) {
-        setMessage("Your free trial expired or you have no active subscription.")
+        stopStatusAnimation(statusId, false)
+        setMessages((prev) => [...prev, { type: "error", text: "Your free trial expired or you have no active subscription.", id: uid() }])
         setLoading(false); return
       }
 
@@ -173,7 +481,6 @@ export default function RenderButton() {
 
       if (urlMatch) {
         const detectedUrl = urlMatch[0].replace(/[.,;:!?)\]}"']+$/, "")
-        setMessage(`Reading brand from ${detectedUrl}...`)
         try {
           const brandResponse = await fetch("https://api.pegasxs.com/extract-brand", {
             method: "POST",
@@ -181,19 +488,12 @@ export default function RenderButton() {
             body: JSON.stringify({ url: detectedUrl }),
           })
           const brandResult = await brandResponse.json()
-          if (!brandResponse.ok || !brandResult.ok) {
-            setMessage(`Couldn't read ${detectedUrl}: ${brandResult.error || "extraction failed"}.`)
-            setLoading(false); return
+          if (brandResponse.ok && brandResult.ok) {
+            brandContext = brandResult.brand
+            scriptToSend = cleanScript.replace(urlMatch[0], "").replace(/\s+/g, " ").trim()
           }
-          brandContext = brandResult.brand
-          scriptToSend = cleanScript.replace(urlMatch[0], "").replace(/\s+/g, " ").trim()
-        } catch (err: any) {
-          setMessage(`Couldn't read ${detectedUrl}: ${err?.message || "network error"}.`)
-          setLoading(false); return
-        }
+        } catch {}
       }
-
-      setMessage("Starting render...")
 
       const renderBody: any = { script: scriptToSend, image_urls: uploadedImages.map((img) => img.url) }
       if (brandContext) renderBody.brand_context = brandContext
@@ -203,29 +503,27 @@ export default function RenderButton() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(renderBody),
       })
-
       const result = await response.json()
 
       if (response.status === 429 && result.limitReached) {
-        setMessage(result.error || "Weekly render limit reached. Resets Monday at midnight UTC.")
+        stopStatusAnimation(statusId, false)
+        setMessages((prev) => [...prev, { type: "error", text: result.error || "Weekly render limit reached.", id: uid() }])
         setLoading(false); return
       }
-
       if (!response.ok || !result.render_id) {
-        setMessage(result.error || "Request failed")
+        stopStatusAnimation(statusId, false)
+        setMessages((prev) => [...prev, { type: "error", text: result.error || "Request failed", id: uid() }])
         setLoading(false); return
       }
 
       await supabase.from("renders").update({ prompt: cleanScript }).eq("id", result.render_id)
-
       window.dispatchEvent(new CustomEvent("pegasxs-render-started", { detail: { render_id: result.render_id } }))
-      setMessage("Rendering...")
       setScript("")
       setUploadedImages([])
       if (textareaRef.current) textareaRef.current.style.height = "26px"
     } catch (err: any) {
-      console.error("Render error:", err)
-      setMessage(err?.message || "Unknown error")
+      stopStatusAnimation(statusId, false)
+      setMessages((prev) => [...prev, { type: "error", text: err?.message || "Unknown error", id: uid() }])
       setLoading(false)
     }
   }
@@ -242,12 +540,16 @@ export default function RenderButton() {
   const placeholderText = loading
     ? "Rendering..."
     : adjustMode
-    ? "Describe what to change — make it faster, add a logo, change the background..."
+    ? "Describe what to change..."
     : "Insert your script here..."
 
   return (
     <>
       <style>{`
+        @keyframes pegasxs-dot-bounce {
+          0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+          40% { transform: scale(1); opacity: 1; }
+        }
         .render-bar textarea::placeholder {
           font-family: "Instrument Serif", serif;
           font-style: italic;
@@ -256,6 +558,145 @@ export default function RenderButton() {
         }
       `}</style>
 
+      {/* ── Chat area ─────────────────────────────────────────────────────────── */}
+      {(showGreeting || messages.length > 0) && (
+        <div style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0,
+          bottom: 120,
+          overflowY: "auto",
+          padding: "80px 24px 40px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 24,
+        }}>
+
+          {/* Personal greeting — disappears after first submit */}
+          {showGreeting && messages.length === 0 && (
+            <div style={{ textAlign: "center", marginTop: "auto", marginBottom: 40 }}>
+              {/* This is the existing greeting — it renders via the parent page component */}
+            </div>
+          )}
+
+          {/* Chat messages */}
+          {messages.map((msg) => {
+            if (msg.type === "user") {
+              return (
+                <div key={msg.id} style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <div style={{
+                    maxWidth: "65%",
+                    background: "var(--ink)",
+                    color: "var(--paper)",
+                    borderRadius: "18px 18px 4px 18px",
+                    padding: "12px 16px",
+                    fontSize: 15,
+                    lineHeight: 1.5,
+                    fontFamily: "Inter, sans-serif",
+                    fontWeight: 400,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}>
+                    {msg.text}
+                  </div>
+                </div>
+              )
+            }
+
+            if (msg.type === "status") {
+              const currentStep = STATUS_STEPS[msg.activeStep]
+              return (
+                <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <PegasxsAvatar />
+                  <div style={{
+                    background: "var(--paper-deep)",
+                    border: "1px solid var(--line)",
+                    borderRadius: "18px 18px 18px 4px",
+                    padding: "12px 16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    minWidth: 200,
+                  }}>
+                    {msg.done ? (
+                      <span style={{ color: "var(--ink-soft)", fontFamily: "Inter, sans-serif", fontSize: 14 }}>
+                        ✓ Video ready
+                      </span>
+                    ) : (
+                      <>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <TypingDots />
+                          <span style={{ color: "var(--ink)", fontFamily: "Inter, sans-serif", fontSize: 14 }}>
+                            {currentStep?.label || "Working..."}
+                          </span>
+                        </div>
+                        {/* Progress steps list */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+                          {STATUS_STEPS.map((step, i) => (
+                            <div key={i} style={{
+                              display: "flex", alignItems: "center", gap: 8,
+                              opacity: i <= msg.activeStep ? 1 : 0.3,
+                              transition: "opacity 0.4s ease",
+                            }}>
+                              <span style={{
+                                width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                                background: i < msg.activeStep ? "#22c55e" : i === msg.activeStep ? "var(--ink)" : "var(--line-strong)",
+                                transition: "background 0.4s ease",
+                              }} />
+                              <span style={{
+                                fontFamily: "Inter, sans-serif", fontSize: 12,
+                                color: i < msg.activeStep ? "#22c55e" : "var(--ink-soft)",
+                                transition: "color 0.4s ease",
+                              }}>
+                                {step.label.replace("...", "")}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )
+            }
+
+            if (msg.type === "video") {
+              return (
+                <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <PegasxsAvatar />
+                  <div>
+                    <VideoBubble renderId={msg.renderId} signedUrl={msg.signedUrl} />
+                  </div>
+                </div>
+              )
+            }
+
+            if (msg.type === "error") {
+              return (
+                <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <PegasxsAvatar />
+                  <div style={{
+                    background: "var(--paper-deep)",
+                    border: "1px solid var(--line)",
+                    borderRadius: "18px 18px 18px 4px",
+                    padding: "12px 16px",
+                    fontSize: 14,
+                    fontFamily: "Inter, sans-serif",
+                    color: "#ef4444",
+                  }}>
+                    {msg.text}
+                  </div>
+                </div>
+              )
+            }
+
+            return null
+          })}
+
+          <div ref={chatBottomRef} />
+        </div>
+      )}
+
+      {/* ── Input bar ──────────────────────────────────────────────────────────── */}
       <div
         className="render-bar"
         style={{
@@ -277,10 +718,8 @@ export default function RenderButton() {
             display: "flex", alignItems: "center", gap: 10,
             background: "var(--paper)",
             border: "1px solid var(--line-strong)",
-            borderRadius: 999,
-            padding: "6px 14px",
-            fontSize: 12,
-            color: "var(--ink-soft)",
+            borderRadius: 999, padding: "6px 14px",
+            fontSize: 12, color: "var(--ink-soft)",
             fontFamily: "Inter, sans-serif",
           }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", flexShrink: 0 }} />
@@ -312,24 +751,17 @@ export default function RenderButton() {
 
         {/* Input bar */}
         <div style={{
-          position: "relative",
-          width: "100%",
-          minHeight: 64,
+          position: "relative", width: "100%", minHeight: 64,
           borderRadius: 9999,
           border: adjustMode ? "1.5px solid #22c55e" : "1.5px solid var(--ink)",
           background: "var(--paper)",
           boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
-          display: "flex",
-          alignItems: "center",
-          paddingLeft: 60,
-          paddingRight: 78,
-          paddingTop: 18,
-          paddingBottom: 18,
+          display: "flex", alignItems: "center",
+          paddingLeft: 60, paddingRight: 78, paddingTop: 18, paddingBottom: 18,
           transition: "border-color 0.2s ease",
         }}>
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileSelect} style={{ display: "none" }} />
 
-          {/* Paperclip — hidden in adjust mode */}
           {!adjustMode && (
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -354,15 +786,11 @@ export default function RenderButton() {
             </button>
           )}
 
-          {/* Adjust icon in adjust mode */}
           {adjustMode && (
-            <div style={{
-              position: "absolute", left: 18, top: "50%", transform: "translateY(-50%)",
-              color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
+            <div style={{ position: "absolute", left: 18, top: "50%", transform: "translateY(-50%)", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
           )}
@@ -411,12 +839,15 @@ export default function RenderButton() {
           </button>
         </div>
 
-        <div style={{
-          minHeight: 20, color: "var(--ink-soft)", fontSize: 14,
-          lineHeight: 1.4, textAlign: "center", whiteSpace: "pre-wrap", paddingInline: 8,
-        }}>
-          {message}
-        </div>
+        {/* Error/info message below input */}
+        {message && (
+          <div style={{
+            minHeight: 20, color: "var(--ink-soft)", fontSize: 14,
+            lineHeight: 1.4, textAlign: "center", whiteSpace: "pre-wrap", paddingInline: 8,
+          }}>
+            {message}
+          </div>
+        )}
       </div>
     </>
   )
