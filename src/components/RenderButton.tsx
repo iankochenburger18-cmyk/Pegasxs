@@ -48,13 +48,11 @@ function TypingDots() {
 function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signedUrl: string | null }) {
   const [url, setUrl] = React.useState<string | null>(signedUrl)
   const [loading, setLoading] = React.useState(!signedUrl)
-  const [playing, setPlaying] = React.useState(false)
+  const [fullscreen, setFullscreen] = React.useState(false)
   const [downloading, setDownloading] = React.useState(false)
-  const videoRef = React.useRef<HTMLVideoElement>(null)
 
   React.useEffect(() => {
     if (url) return
-    // Fetch signed URL if not already available
     async function fetchUrl() {
       try {
         const { data: sessionData } = await supabase.auth.getSession()
@@ -98,7 +96,7 @@ function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signe
 
   if (loading) {
     return (
-      <div style={{ width: 180, height: 100, borderRadius: 12, background: "var(--paper-deep)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 90, height: 140, borderRadius: 12, background: "var(--paper-deep)", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <TypingDots />
       </div>
     )
@@ -113,72 +111,100 @@ function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signe
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {/* Video player */}
-      <div style={{
-        position: "relative", borderRadius: 14, overflow: "hidden",
-        background: "#000", width: 200,
-        boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-        cursor: "pointer",
-      }}
-        onClick={() => {
-          setPlaying(!playing)
-          if (videoRef.current) {
-            playing ? videoRef.current.pause() : videoRef.current.play()
-          }
-        }}
-      >
-        <video
-          ref={videoRef}
-          src={url}
-          style={{ width: "100%", display: "block", borderRadius: 14 }}
-          playsInline
-          loop
-          onEnded={() => setPlaying(false)}
-        />
-        {/* Play overlay when paused */}
-        {!playing && (
+    <>
+      {/* Small thumbnail in chat */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div
+          onClick={() => setFullscreen(true)}
+          style={{
+            position: "relative", width: 90, height: 140,
+            borderRadius: 12, overflow: "hidden",
+            background: "#000", cursor: "pointer",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
+            flexShrink: 0,
+          }}
+        >
+          <video
+            src={url}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            muted
+            playsInline
+          />
+          {/* Play icon overlay */}
           <div style={{
-            position: "absolute", inset: 0, display: "flex",
-            alignItems: "center", justifyContent: "center",
-            background: "rgba(0,0,0,0.35)",
-            borderRadius: 14,
+            position: "absolute", inset: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(0,0,0,0.3)",
           }}>
             <div style={{
-              width: 44, height: 44, borderRadius: "50%",
-              background: "rgba(255,255,255,0.92)",
+              width: 32, height: 32, borderRadius: "50%",
+              background: "rgba(255,255,255,0.9)",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#000">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#000">
                 <path d="M5 3l14 9-14 9V3z" />
               </svg>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Download button below thumbnail */}
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: "none", border: "1px solid var(--line-strong)",
+            borderRadius: 999, padding: "5px 12px",
+            cursor: downloading ? "default" : "pointer",
+            color: "var(--ink-soft)", fontFamily: "Inter, sans-serif",
+            fontSize: 12, width: "fit-content",
+            opacity: downloading ? 0.5 : 1, transition: "opacity 0.2s",
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          {downloading ? "Downloading..." : "Download"}
+        </button>
       </div>
 
-      {/* Download button */}
-      <button
-        onClick={handleDownload}
-        disabled={downloading}
-        style={{
-          display: "flex", alignItems: "center", gap: 6,
-          background: "none", border: "1px solid var(--line-strong)",
-          borderRadius: 999, padding: "5px 12px",
-          cursor: downloading ? "default" : "pointer",
-          color: "var(--ink-soft)", fontFamily: "Inter, sans-serif",
-          fontSize: 12, width: "fit-content",
-          opacity: downloading ? 0.5 : 1, transition: "opacity 0.2s",
-        }}
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-          <polyline points="7 10 12 15 17 10" />
-          <line x1="12" y1="15" x2="12" y2="3" />
-        </svg>
-        {downloading ? "Downloading..." : "Download"}
-      </button>
-    </div>
+      {/* Fullscreen overlay — opens when thumbnail clicked */}
+      {fullscreen && (
+        <div
+          onClick={() => setFullscreen(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,0.92)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", maxHeight: "90vh", maxWidth: "90vw" }}>
+            <video
+              src={url}
+              style={{ maxHeight: "90vh", maxWidth: "90vw", borderRadius: 16, display: "block" }}
+              autoPlay
+              controls
+              playsInline
+              loop
+            />
+            {/* Close button */}
+            <button
+              onClick={() => setFullscreen(false)}
+              style={{
+                position: "absolute", top: -16, right: -16,
+                width: 32, height: 32, borderRadius: "50%",
+                background: "rgba(255,255,255,0.15)", border: "none",
+                color: "#fff", fontSize: 18, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >×</button>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -568,8 +594,14 @@ export default function RenderButton() {
           padding: "80px 24px 40px",
           display: "flex",
           flexDirection: "column",
-          gap: 24,
+          alignItems: "center",
         }}>
+          <div style={{
+            width: "min(760px, calc(100vw - 32px))",
+            display: "flex",
+            flexDirection: "column",
+            gap: 24,
+          }}>
 
           {/* Personal greeting — disappears after first submit */}
           {showGreeting && messages.length === 0 && (
@@ -693,6 +725,7 @@ export default function RenderButton() {
           })}
 
           <div ref={chatBottomRef} />
+          </div>
         </div>
       )}
 
