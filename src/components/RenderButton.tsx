@@ -614,9 +614,8 @@ export default function RenderButton() {
           {messages.map((msg) => {
             if (msg.type === "user") {
               return (
-                <div key={msg.id} style={{ display: "flex", justifyContent: "flex-end" }}>
+                <div key={msg.id} style={{ display: "flex", justifyContent: "flex-end", paddingLeft: "25%" }}>
                   <div style={{
-                    maxWidth: "65%",
                     background: "var(--ink)",
                     color: "var(--paper)",
                     borderRadius: "18px 18px 4px 18px",
@@ -637,7 +636,7 @@ export default function RenderButton() {
             if (msg.type === "status") {
               const currentStep = STATUS_STEPS[msg.activeStep]
               return (
-                <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, paddingRight: "25%" }}>
                   <PegasxsAvatar />
                   <div style={{
                     background: "var(--paper-deep)",
@@ -693,7 +692,7 @@ export default function RenderButton() {
 
             if (msg.type === "video") {
               return (
-                <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, paddingRight: "25%" }}>
                   <PegasxsAvatar />
                   <div>
                     <VideoBubble renderId={msg.renderId} signedUrl={msg.signedUrl} />
@@ -704,7 +703,7 @@ export default function RenderButton() {
 
             if (msg.type === "error") {
               return (
-                <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, paddingRight: "25%" }}>
                   <PegasxsAvatar />
                   <div style={{
                     background: "var(--paper-deep)",
