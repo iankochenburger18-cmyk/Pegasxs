@@ -5,7 +5,6 @@ import { supabase } from "@/lib/supabaseClient"
 const MAX_IMAGES = 5
 const MAX_FILE_SIZE_MB = 5
 
-// Cosmetic status steps shown while rendering — purely visual, fake timing
 const STATUS_STEPS = [
   { label: "Thinking...", duration: 4000 },
   { label: "Researching your niche...", duration: 6000 },
@@ -25,7 +24,6 @@ function uid() {
   return Math.random().toString(36).slice(2, 10)
 }
 
-// ─── Typing dots indicator ────────────────────────────────────────────────────
 function TypingDots() {
   return (
     <span style={{ display: "inline-flex", gap: 3, alignItems: "center", height: 16 }}>
@@ -44,7 +42,6 @@ function TypingDots() {
   )
 }
 
-// ─── Video bubble ─────────────────────────────────────────────────────────────
 function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signedUrl: string | null }) {
   const [url, setUrl] = React.useState<string | null>(signedUrl)
   const [loading, setLoading] = React.useState(!signedUrl)
@@ -112,7 +109,6 @@ function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signe
 
   return (
     <>
-      {/* Small thumbnail in chat */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div
           onClick={() => setFullscreen(true)}
@@ -130,7 +126,6 @@ function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signe
             muted
             playsInline
           />
-          {/* Play icon overlay */}
           <div style={{
             position: "absolute", inset: 0,
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -147,8 +142,6 @@ function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signe
             </div>
           </div>
         </div>
-
-        {/* Download button below thumbnail */}
         <button
           onClick={handleDownload}
           disabled={downloading}
@@ -171,7 +164,6 @@ function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signe
         </button>
       </div>
 
-      {/* Fullscreen overlay — opens when thumbnail clicked */}
       {fullscreen && (
         <div
           onClick={() => setFullscreen(false)}
@@ -190,7 +182,6 @@ function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signe
               playsInline
               loop
             />
-            {/* Close button */}
             <button
               onClick={() => setFullscreen(false)}
               style={{
@@ -208,7 +199,6 @@ function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signe
   )
 }
 
-// ─── Pegasxs avatar ──────────────────────────────────────────────────────────
 function PegasxsAvatar() {
   return (
     <div style={{
@@ -223,8 +213,7 @@ function PegasxsAvatar() {
   )
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
-export default function RenderButton() {
+export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => void } = {}) {
   const [script, setScript] = React.useState("")
   const [loading, setLoading] = React.useState(false)
   const [message, setMessage] = React.useState("")
@@ -239,30 +228,25 @@ export default function RenderButton() {
   const lastRenderIdRef = React.useRef<string | number | null>(null)
   const adjustModeRef = React.useRef(false)
 
-  // Chat messages — session-only, cleared on unmount
   const [messages, setMessages] = React.useState<ChatMessage[]>([])
-  const [showGreeting, setShowGreeting] = React.useState(true)
+  const [hasSubmitted, setHasSubmitted] = React.useState(false)
 
-  // Status step animation
   const statusTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const activeStatusIdRef = React.useRef<string | null>(null)
 
   React.useEffect(() => { lastRenderIdRef.current = lastRenderId }, [lastRenderId])
   React.useEffect(() => { adjustModeRef.current = adjustMode }, [adjustMode])
 
-  // Scroll to bottom whenever messages change
   React.useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // Clear everything on unmount (user leaves the page)
   React.useEffect(() => {
     return () => {
       if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
     }
   }, [])
 
-  // Advance status steps cosmetically
   function startStatusAnimation(msgId: string) {
     activeStatusIdRef.current = msgId
     let stepIndex = 0
@@ -271,13 +255,11 @@ export default function RenderButton() {
       if (activeStatusIdRef.current !== msgId) return
       stepIndex++
       if (stepIndex >= STATUS_STEPS.length) return
-
       setMessages((prev) => prev.map((m) =>
         m.id === msgId && m.type === "status"
           ? { ...m, activeStep: stepIndex }
           : m
       ))
-
       statusTimerRef.current = setTimeout(advance, STATUS_STEPS[stepIndex].duration)
     }
 
@@ -288,27 +270,19 @@ export default function RenderButton() {
     if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
     activeStatusIdRef.current = null
     setMessages((prev) => prev.map((m) =>
-      m.id === msgId && m.type === "status"
-        ? { ...m, done }
-        : m
+      m.id === msgId && m.type === "status" ? { ...m, done } : m
     ))
   }
 
-  // Listen for render events
   React.useEffect(() => {
     function handleRenderDone(e: Event) {
       const ce = e as CustomEvent<{ render_id: string | number; video_path?: string }>
       const renderId = ce.detail?.render_id
-
-      // Stop status animation
       const statusMsg = activeStatusIdRef.current
       if (statusMsg) stopStatusAnimation(statusMsg, true)
-
       setLoading(false)
       setMessage("")
       setAdjustMode(true)
-
-      // Add video bubble to chat
       if (renderId) {
         setMessages((prev) => [
           ...prev,
@@ -320,7 +294,6 @@ export default function RenderButton() {
     function handleRenderFailed() {
       const statusMsg = activeStatusIdRef.current
       if (statusMsg) stopStatusAnimation(statusMsg, false)
-
       setLoading(false)
       setMessage("")
       setAdjustMode(false)
@@ -396,12 +369,10 @@ export default function RenderButton() {
     if (!renderId) { setMessage("No video to adjust."); return }
 
     setLoading(true); setMessage("")
-    setShowGreeting(false)
+    if (!hasSubmitted) { setHasSubmitted(true); onFirstSubmit?.() }
 
-    // Add user message
     setMessages((prev) => [...prev, { type: "user", text: cleanScript, id: uid() }])
 
-    // Add status message
     const statusId = uid()
     setMessages((prev) => [...prev, {
       type: "status",
@@ -450,12 +421,10 @@ export default function RenderButton() {
     if (!cleanScript) { setMessage("Please enter a script first."); return }
 
     setLoading(true); setMessage("")
-    setShowGreeting(false)
+    if (!hasSubmitted) { setHasSubmitted(true); onFirstSubmit?.() }
 
-    // Add user message to chat
     setMessages((prev) => [...prev, { type: "user", text: cleanScript, id: uid() }])
 
-    // Add status message immediately
     const statusId = uid()
     setMessages((prev) => [...prev, {
       type: "status",
@@ -584,8 +553,7 @@ export default function RenderButton() {
         }
       `}</style>
 
-      {/* ── Chat area ─────────────────────────────────────────────────────────── */}
-      {(showGreeting || messages.length > 0) && (
+      {messages.length > 0 && (
         <div style={{
           position: "fixed",
           top: 0, left: 0, right: 0,
@@ -603,132 +571,122 @@ export default function RenderButton() {
             gap: 24,
           }}>
 
-          {/* Personal greeting — disappears after first submit */}
-          {showGreeting && messages.length === 0 && (
-            <div style={{ textAlign: "center", marginTop: "auto", marginBottom: 40 }}>
-              {/* This is the existing greeting — it renders via the parent page component */}
-            </div>
-          )}
-
-          {/* Chat messages */}
-          {messages.map((msg) => {
-            if (msg.type === "user") {
-              return (
-                <div key={msg.id} style={{ display: "flex", justifyContent: "flex-end", paddingLeft: "25%" }}>
-                  <div style={{
-                    background: "var(--ink)",
-                    color: "var(--paper)",
-                    borderRadius: "18px 18px 4px 18px",
-                    padding: "12px 16px",
-                    fontSize: 15,
-                    lineHeight: 1.5,
-                    fontFamily: "Inter, sans-serif",
-                    fontWeight: 400,
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                  }}>
-                    {msg.text}
+            {messages.map((msg) => {
+              if (msg.type === "user") {
+                return (
+                  <div key={msg.id} style={{ display: "flex", justifyContent: "flex-end", paddingLeft: "40%" }}>
+                    <div style={{
+                      background: "var(--ink)",
+                      color: "var(--paper)",
+                      borderRadius: "18px 18px 4px 18px",
+                      padding: "12px 16px",
+                      fontSize: 15,
+                      lineHeight: 1.5,
+                      fontFamily: "Inter, sans-serif",
+                      fontWeight: 400,
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}>
+                      {msg.text}
+                    </div>
                   </div>
-                </div>
-              )
-            }
+                )
+              }
 
-            if (msg.type === "status") {
-              const currentStep = STATUS_STEPS[msg.activeStep]
-              return (
-                <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, paddingRight: "25%" }}>
-                  <PegasxsAvatar />
-                  <div style={{
-                    background: "var(--paper-deep)",
-                    border: "1px solid var(--line)",
-                    borderRadius: "18px 18px 18px 4px",
-                    padding: "12px 16px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                    minWidth: 200,
-                  }}>
-                    {msg.done ? (
-                      <span style={{ color: "var(--ink-soft)", fontFamily: "Inter, sans-serif", fontSize: 14 }}>
-                        ✓ Video ready
-                      </span>
-                    ) : (
-                      <>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <TypingDots />
-                          <span style={{ color: "var(--ink)", fontFamily: "Inter, sans-serif", fontSize: 14 }}>
-                            {currentStep?.label || "Working..."}
-                          </span>
-                        </div>
-                        {/* Progress steps list */}
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
-                          {STATUS_STEPS.map((step, i) => (
-                            <div key={i} style={{
-                              display: "flex", alignItems: "center", gap: 8,
-                              opacity: i <= msg.activeStep ? 1 : 0.3,
-                              transition: "opacity 0.4s ease",
-                            }}>
-                              <span style={{
-                                width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-                                background: i < msg.activeStep ? "#22c55e" : i === msg.activeStep ? "var(--ink)" : "var(--line-strong)",
-                                transition: "background 0.4s ease",
-                              }} />
-                              <span style={{
-                                fontFamily: "Inter, sans-serif", fontSize: 12,
-                                color: i < msg.activeStep ? "#22c55e" : "var(--ink-soft)",
-                                transition: "color 0.4s ease",
+              if (msg.type === "status") {
+                const currentStep = STATUS_STEPS[msg.activeStep]
+                return (
+                  <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, paddingRight: "40%" }}>
+                    <PegasxsAvatar />
+                    <div style={{
+                      background: "var(--paper-deep)",
+                      border: "1px solid var(--line)",
+                      borderRadius: "18px 18px 18px 4px",
+                      padding: "12px 16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                      minWidth: 200,
+                    }}>
+                      {msg.done ? (
+                        <span style={{ color: "var(--ink-soft)", fontFamily: "Inter, sans-serif", fontSize: 14 }}>
+                          ✓ Video ready
+                        </span>
+                      ) : (
+                        <>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <TypingDots />
+                            <span style={{ color: "var(--ink)", fontFamily: "Inter, sans-serif", fontSize: 14 }}>
+                              {currentStep?.label || "Working..."}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+                            {STATUS_STEPS.map((step, i) => (
+                              <div key={i} style={{
+                                display: "flex", alignItems: "center", gap: 8,
+                                opacity: i <= msg.activeStep ? 1 : 0.3,
+                                transition: "opacity 0.4s ease",
                               }}>
-                                {step.label.replace("...", "")}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
+                                <span style={{
+                                  width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                                  background: i < msg.activeStep ? "#22c55e" : i === msg.activeStep ? "var(--ink)" : "var(--line-strong)",
+                                  transition: "background 0.4s ease",
+                                }} />
+                                <span style={{
+                                  fontFamily: "Inter, sans-serif", fontSize: 12,
+                                  color: i < msg.activeStep ? "#22c55e" : "var(--ink-soft)",
+                                  transition: "color 0.4s ease",
+                                }}>
+                                  {step.label.replace("...", "")}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            }
+                )
+              }
 
-            if (msg.type === "video") {
-              return (
-                <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, paddingRight: "25%" }}>
-                  <PegasxsAvatar />
-                  <div>
-                    <VideoBubble renderId={msg.renderId} signedUrl={msg.signedUrl} />
+              if (msg.type === "video") {
+                return (
+                  <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, paddingRight: "40%" }}>
+                    <PegasxsAvatar />
+                    <div>
+                      <VideoBubble renderId={msg.renderId} signedUrl={msg.signedUrl} />
+                    </div>
                   </div>
-                </div>
-              )
-            }
+                )
+              }
 
-            if (msg.type === "error") {
-              return (
-                <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, paddingRight: "25%" }}>
-                  <PegasxsAvatar />
-                  <div style={{
-                    background: "var(--paper-deep)",
-                    border: "1px solid var(--line)",
-                    borderRadius: "18px 18px 18px 4px",
-                    padding: "12px 16px",
-                    fontSize: 14,
-                    fontFamily: "Inter, sans-serif",
-                    color: "#ef4444",
-                  }}>
-                    {msg.text}
+              if (msg.type === "error") {
+                return (
+                  <div key={msg.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, paddingRight: "40%" }}>
+                    <PegasxsAvatar />
+                    <div style={{
+                      background: "var(--paper-deep)",
+                      border: "1px solid var(--line)",
+                      borderRadius: "18px 18px 18px 4px",
+                      padding: "12px 16px",
+                      fontSize: 14,
+                      fontFamily: "Inter, sans-serif",
+                      color: "#ef4444",
+                    }}>
+                      {msg.text}
+                    </div>
                   </div>
-                </div>
-              )
-            }
+                )
+              }
 
-            return null
-          })}
+              return null
+            })}
 
-          <div ref={chatBottomRef} />
+            <div ref={chatBottomRef} />
           </div>
         </div>
       )}
 
-      {/* ── Input bar ──────────────────────────────────────────────────────────── */}
       <div
         className="render-bar"
         style={{
@@ -744,7 +702,6 @@ export default function RenderButton() {
           zIndex: 50,
         }}
       >
-        {/* Adjust mode label */}
         {adjustMode && !loading && (
           <div style={{
             display: "flex", alignItems: "center", gap: 10,
@@ -765,7 +722,6 @@ export default function RenderButton() {
           </div>
         )}
 
-        {/* Image thumbnails */}
         {uploadedImages.length > 0 && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", justifyContent: "center" }}>
             {uploadedImages.map((img, idx) => (
@@ -781,7 +737,6 @@ export default function RenderButton() {
           </div>
         )}
 
-        {/* Input bar */}
         <div style={{
           position: "relative", width: "100%", minHeight: 64,
           borderRadius: 9999,
@@ -871,7 +826,6 @@ export default function RenderButton() {
           </button>
         </div>
 
-        {/* Error/info message below input */}
         {message && (
           <div style={{
             minHeight: 20, color: "var(--ink-soft)", fontSize: 14,
