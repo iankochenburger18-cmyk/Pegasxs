@@ -233,6 +233,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
 
   const statusTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const activeStatusIdRef = React.useRef<string | null>(null)
+  const pollingIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
 
   React.useEffect(() => { lastRenderIdRef.current = lastRenderId }, [lastRenderId])
   React.useEffect(() => { adjustModeRef.current = adjustMode }, [adjustMode])
@@ -244,8 +245,38 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
   React.useEffect(() => {
     return () => {
       if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
+      if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current)
     }
   }, [])
+
+  function startPolling(renderId: string | number) {
+    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current)
+
+    pollingIntervalRef.current = setInterval(async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const token = sessionData.session?.access_token
+        if (!token) return
+
+        const res = await fetch("https://api.pegasxs.com/get-render-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ render_id: renderId }),
+        })
+        const data = await res.json()
+
+        if (data.render?.status === "rendered") {
+          if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current)
+          window.dispatchEvent(new CustomEvent("pegasxs-render-done", {
+            detail: { render_id: renderId, video_path: data.render.video_path }
+          }))
+        } else if (data.render?.status === "failed") {
+          if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current)
+          window.dispatchEvent(new CustomEvent("pegasxs-render-failed"))
+        }
+      } catch {}
+    }, 5000)
+  }
 
   function startStatusAnimation(msgId: string) {
     activeStatusIdRef.current = msgId
@@ -278,6 +309,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
     function handleRenderDone(e: Event) {
       const ce = e as CustomEvent<{ render_id: string | number; video_path?: string }>
       const renderId = ce.detail?.render_id
+      if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current)
       const statusMsg = activeStatusIdRef.current
       if (statusMsg) stopStatusAnimation(statusMsg, true)
       setLoading(false)
@@ -292,6 +324,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
     }
 
     function handleRenderFailed() {
+      if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current)
       const statusMsg = activeStatusIdRef.current
       if (statusMsg) stopStatusAnimation(statusMsg, false)
       setLoading(false)
@@ -407,6 +440,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
       }
 
       window.dispatchEvent(new CustomEvent("pegasxs-render-started", { detail: { render_id: result.render_id } }))
+      startPolling(result.render_id)
       setScript("")
       if (textareaRef.current) textareaRef.current.style.height = "26px"
     } catch (err: any) {
@@ -513,6 +547,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
 
       await supabase.from("renders").update({ prompt: cleanScript }).eq("id", result.render_id)
       window.dispatchEvent(new CustomEvent("pegasxs-render-started", { detail: { render_id: result.render_id } }))
+      startPolling(result.render_id)
       setScript("")
       setUploadedImages([])
       if (textareaRef.current) textareaRef.current.style.height = "26px"
@@ -570,7 +605,6 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
             flexDirection: "column",
             gap: 24,
           }}>
-
             {messages.map((msg) => {
               if (msg.type === "user") {
                 return (
@@ -681,7 +715,6 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
 
               return null
             })}
-
             <div ref={chatBottomRef} />
           </div>
         </div>
