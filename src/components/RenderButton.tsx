@@ -111,7 +111,7 @@ function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signe
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div
-          onClick={() => setFullscreen(true)}
+          onClick={() => { setFullscreen(true); window.dispatchEvent(new Event("pegasxs-video-open")) }}
           style={{
             position: "relative", width: 90, height: 140,
             borderRadius: 12, overflow: "hidden",
@@ -166,30 +166,31 @@ function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signe
 
       {fullscreen && (
         <div
-          onClick={() => setFullscreen(false)}
+          onClick={() => { setFullscreen(false); window.dispatchEvent(new Event("pegasxs-video-close")) }}
           style={{
-            position: "fixed", inset: 0, zIndex: 1000,
-            background: "rgba(0,0,0,0.92)",
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "#000",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
         >
-          <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", maxHeight: "90vh", maxWidth: "90vw" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ position: "relative", width: "100vw", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <video
               src={url}
-              style={{ maxHeight: "90vh", maxWidth: "90vw", borderRadius: 16, display: "block" }}
+              style={{ maxHeight: "100vh", maxWidth: "100vw", display: "block" }}
               autoPlay
               controls
               playsInline
               loop
             />
             <button
-              onClick={() => setFullscreen(false)}
+              onClick={() => { setFullscreen(false); window.dispatchEvent(new Event("pegasxs-video-close")) }}
               style={{
-                position: "absolute", top: -16, right: -16,
-                width: 32, height: 32, borderRadius: "50%",
+                position: "absolute", top: 20, right: 20,
+                width: 40, height: 40, borderRadius: "50%",
                 background: "rgba(255,255,255,0.15)", border: "none",
-                color: "#fff", fontSize: 18, cursor: "pointer",
+                color: "#fff", fontSize: 22, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
+                zIndex: 10000,
               }}
             >×</button>
           </div>
@@ -230,6 +231,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
 
   const [messages, setMessages] = React.useState<ChatMessage[]>([])
   const [hasSubmitted, setHasSubmitted] = React.useState(false)
+  const [videoFullscreen, setVideoFullscreen] = React.useState(false)
 
   const statusTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const activeStatusIdRef = React.useRef<string | null>(null)
@@ -243,9 +245,15 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
   }, [messages])
 
   React.useEffect(() => {
+    function handleVideoOpen() { setVideoFullscreen(true) }
+    function handleVideoClose() { setVideoFullscreen(false) }
+    window.addEventListener("pegasxs-video-open", handleVideoOpen)
+    window.addEventListener("pegasxs-video-close", handleVideoClose)
     return () => {
       if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
       if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current)
+      window.removeEventListener("pegasxs-video-open", handleVideoOpen)
+      window.removeEventListener("pegasxs-video-close", handleVideoClose)
     }
   }, [])
 
@@ -588,7 +596,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
         }
       `}</style>
 
-      {messages.length > 0 && (
+      {messages.length > 0 && !videoFullscreen && (
         <div style={{
           position: "fixed",
           top: 0, left: 0, right: 0,
@@ -728,7 +736,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
           bottom: "32px",
           transform: "translateX(-50%)",
           width: "min(760px, calc(100vw - 32px))",
-          display: "flex",
+          display: videoFullscreen ? "none" : "flex",
           flexDirection: "column",
           alignItems: "center",
           gap: 12,

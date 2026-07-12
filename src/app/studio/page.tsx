@@ -10,6 +10,18 @@ export default function StudioPage() {
   const router = useRouter()
   const [checking, setChecking] = React.useState(true)
   const [showGreeting, setShowGreeting] = React.useState(true)
+  const [videoFullscreen, setVideoFullscreen] = React.useState(false)
+
+  React.useEffect(() => {
+    function handleVideoOpen() { setVideoFullscreen(true) }
+    function handleVideoClose() { setVideoFullscreen(false) }
+    window.addEventListener("pegasxs-video-open", handleVideoOpen)
+    window.addEventListener("pegasxs-video-close", handleVideoClose)
+    return () => {
+      window.removeEventListener("pegasxs-video-open", handleVideoOpen)
+      window.removeEventListener("pegasxs-video-close", handleVideoClose)
+    }
+  }, [])
 
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -29,11 +41,15 @@ export default function StudioPage() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)", position: "relative" }}>
 
+      {/* Nav */}
+      {!videoFullscreen && (
       <div style={{ position: "fixed", top: 20, left: 28, zIndex: 60 }}>
         <a href="/">
           <img src="/logo.png" alt="Pegasxs" style={{ width: 40, height: 40, objectFit: "contain", display: "block" }} />
         </a>
       </div>
+      )}
+      {!videoFullscreen && (
       <nav className="pill">
         <a href="/">Home</a>
         <a href="/library">Library</a>
@@ -44,19 +60,27 @@ export default function StudioPage() {
           Sign out
         </button>
       </nav>
+      )}
 
+      {/* Onboarding overlay */}
       <OnboardingStepper />
 
+      {/* Personal greeting — hidden after first prompt submitted */}
       {showGreeting && (
         <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, bottom: 120,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          pointerEvents: "none", zIndex: 0,
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 120,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          pointerEvents: "none",
+          zIndex: 0,
         }}>
           <PersonalGreeting />
         </div>
       )}
 
+      {/* RenderButton — contains the full chat UI */}
       <RenderButton onFirstSubmit={() => setShowGreeting(false)} />
     </div>
   )
