@@ -166,7 +166,7 @@ export function PricingCards() {
 
         const { data: sub } = await supabase
           .from("subscriptions")
-          .select("subscription_status, trial_ends_at, plan")
+          .select("subscription_status, trial_ends_at, stripe_price_id")
           .eq("user_id", sessionData.session.user.id)
           .single()
 
@@ -176,9 +176,11 @@ export function PricingCards() {
         const trialEndsAt = sub.trial_ends_at ? new Date(sub.trial_ends_at) : null
         const isActive = sub.subscription_status === "active" || (trialEndsAt !== null && trialEndsAt > now)
 
-        if (isActive && sub.plan === "pro") setUserPlan("pro")
-        else if (isActive && (sub.plan === "agency" || sub.plan === "max")) setUserPlan("agency")
-        else setUserPlan("none")
+        if (!isActive) { setUserPlan("none"); return }
+
+        const AGENCY_PRICE_ID = "price_1TU8jjF5X7l7zIpyUhoFdrVp"
+        if (sub.stripe_price_id === AGENCY_PRICE_ID) setUserPlan("agency")
+        else setUserPlan("pro")
       } catch {
         setUserPlan("none")
       }
