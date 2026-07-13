@@ -30,7 +30,7 @@ export default function TermsPage() {
 
         <div style={{ width: 48, height: 1, background: "#ddd", marginBottom: 56 }} />
 
-        {section("1. Provider", <p style={{ margin: 0 }}>Pegasxs Studio ("Pegasxs", "we", "us") is operated by Ian Kochenburger, Winterthur, Switzerland. Contact: <a href="mailto:support@pegasxs.com" style={{ color: "#0b0b0b" }}>support@pegasxs.com</a></p>)}
+        {section("1. Provider", <p style={{ margin: 0 }}>Pegasxs Studio ("Pegasxs", "we", "us") is operated by Pegasxs Studio, Zurich, Switzerland. Contact: <a href="mailto:support@pegasxs.com" style={{ color: "#0b0b0b" }}>support@pegasxs.com</a></p>)}
 
         {section("2. Scope", <p style={{ margin: 0 }}>These Terms govern access to and use of the Pegasxs platform, including the web application at pegasxs.com and all associated services. By creating an account or using the service, you agree to these Terms.</p>)}
 
@@ -95,7 +95,7 @@ export default function TermsPage() {
           <p style={{ margin: 0 }}>Users may request access to, correction of, or deletion of their personal data by contacting <a href="mailto:support@pegasxs.com" style={{ color: "#0b0b0b" }}>support@pegasxs.com</a>.</p>
         </>)}
 
-        {section("13. Governing Law and Jurisdiction", <p style={{ margin: 0 }}>These Terms are governed by Swiss law. Any disputes arising from or in connection with these Terms shall be subject to the exclusive jurisdiction of the courts of Winterthur, Canton of Zurich, Switzerland, unless mandatory consumer protection provisions require otherwise.</p>)}
+        {section("13. Governing Law and Jurisdiction", <p style={{ margin: 0 }}>These Terms are governed by Swiss law. Any disputes arising from or in connection with these Terms shall be subject to the exclusive jurisdiction of the courts of Zurich, Switzerland, unless mandatory consumer protection provisions require otherwise.</p>)}
 
         {section("14. Changes to These Terms", <p style={{ margin: 0 }}>Pegasxs may update these Terms from time to time. Users will be notified of material changes by email or via a notice on the platform. Continued use of the service after changes take effect constitutes acceptance of the updated Terms.</p>)}
 

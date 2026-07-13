@@ -30,7 +30,7 @@ export default function PrivacyPage() {
 
         <div style={{ width: 48, height: 1, background: "#ddd", marginBottom: 56 }} />
 
-        {section("1. Controller", <p style={{ margin: 0 }}>The data controller responsible for processing your personal data is:<br /><br />Ian Kochenburger<br />Pegasxs Studio<br />Winterthur, Switzerland<br /><a href="mailto:support@pegasxs.com" style={{ color: "#0b0b0b" }}>support@pegasxs.com</a></p>)}
+        {section("1. Controller", <p style={{ margin: 0 }}>The data controller responsible for processing your personal data is:<br /><br />Pegasxs Studio<br />Zurich, Switzerland<br /><a href="mailto:support@pegasxs.com" style={{ color: "#0b0b0b" }}>support@pegasxs.com</a></p>)}
 
         {section("2. Legal Basis", <p style={{ margin: 0 }}>This Privacy Policy is based on the Swiss Federal Act on Data Protection (DSG/nDSG), effective September 1, 2023. Where users are located in the European Union or European Economic Area, the EU General Data Protection Regulation (GDPR) also applies. Processing of your data is based on your consent (Art. 6(1)(a) GDPR), the performance of a contract (Art. 6(1)(b) GDPR), and our legitimate interests (Art. 6(1)(f) GDPR) where applicable.</p>)}
 
