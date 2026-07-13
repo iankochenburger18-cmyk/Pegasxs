@@ -8,9 +8,10 @@ interface PricingCardProps {
   price: string
   bulletItems: string[]
   glowColor: string
+  userPlan: "pro" | "agency" | "none" | "loading"
 }
 
-function PricingCard({ plan, title, price, bulletItems, glowColor }: PricingCardProps) {
+function PricingCard({ plan, title, price, bulletItems, glowColor, userPlan }: PricingCardProps) {
   const cardRef = React.useRef<HTMLDivElement>(null)
   const [angle, setAngle] = React.useState(120)
   const [edge, setEdge] = React.useState(0)
@@ -20,6 +21,8 @@ function PricingCard({ plan, title, price, bulletItems, glowColor }: PricingCard
   const borderWidth = 1
   const edgeSensitivity = 52
   const coneSpread = 16
+
+  const isCurrentPlan = userPlan === plan
 
   function parseHSL(hslStr: string) {
     const match = hslStr.match(/([\d.]+)\s*([\d.]+)%?\s*([\d.]+)%?/)
@@ -78,6 +81,33 @@ function PricingCard({ plan, title, price, bulletItems, glowColor }: PricingCard
     }
   }
 
+  function handleCancel() {
+    window.location.href = "/cancel"
+  }
+
+  const ctaLabel = isCurrentPlan
+    ? "Cancel plan"
+    : plan === "pro" ? "Start with Pro →" : "Upgrade to Max →"
+
+  const ctaAction = isCurrentPlan ? handleCancel : handleCheckout
+
+  const ctaStyle: React.CSSProperties = {
+    alignSelf: "center",
+    width: "78%",
+    height: 44,
+    borderRadius: 999,
+    border: isCurrentPlan ? "1px solid rgba(255,80,80,0.6)" : "1px solid rgba(255,255,255,0.85)",
+    background: isCurrentPlan ? "rgba(255,60,60,0.12)" : "#2583F5",
+    color: isCurrentPlan ? "#ff6b6b" : "#FFFFFF",
+    fontSize: 17,
+    fontWeight: 700,
+    cursor: loadingCheckout ? "default" : "pointer",
+    opacity: loadingCheckout ? 0.7 : 1,
+    boxShadow: isCurrentPlan ? "none" : "inset 0 1px 0 rgba(255,255,255,0.16)",
+    fontFamily: "inherit",
+    transition: "all 0.2s ease",
+  }
+
   return (
     <div
       ref={cardRef}
@@ -85,9 +115,19 @@ function PricingCard({ plan, title, price, bulletItems, glowColor }: PricingCard
       onPointerLeave={() => setEdge(0)}
       style={{ position: "relative", width: "100%", height: "100%", minWidth: 320, minHeight: 520, borderRadius, overflow: "visible", isolation: "isolate", fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}
     >
+      {isCurrentPlan && (
+        <div style={{
+          position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)",
+          background: "#22c55e", color: "#000", fontSize: 11, fontWeight: 700,
+          letterSpacing: "0.08em", textTransform: "uppercase",
+          padding: "4px 14px", borderRadius: 999, zIndex: 10, whiteSpace: "nowrap",
+        }}>
+          Current plan
+        </div>
+      )}
       <div style={{ position: "absolute", inset: 0, borderRadius, padding: borderWidth, background: `conic-gradient(from ${angle - coneSpread}deg, rgba(255,255,255,0.06) 0deg, rgba(255,255,255,0.06) 10deg, ${softGlow} 16deg, ${mediumGlow} 26deg, ${strongGlow} 38deg, ${mediumGlow} 50deg, ${softGlow} 62deg, rgba(255,255,255,0.06) 74deg, rgba(255,255,255,0.06) 360deg)`, opacity: Math.max(edge * 1.1, 0.08), filter: `blur(${6 * 0.35}px)`, boxSizing: "border-box", zIndex: 1, pointerEvents: "none" }} />
       <div style={{ position: "absolute", inset: borderWidth, borderRadius: Math.max(borderRadius - borderWidth, 0), background: "#050505", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03), inset 0 0 18px rgba(255,255,255,0.04), 0 0 0 1px rgba(255,255,255,0.015)", zIndex: 2 }} />
-      <div style={{ position: "absolute", inset: 0, borderRadius, border: "1px solid rgba(255,255,255,0.07)", pointerEvents: "none", zIndex: 3 }} />
+      <div style={{ position: "absolute", inset: 0, borderRadius, border: isCurrentPlan ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(255,255,255,0.07)", pointerEvents: "none", zIndex: 3 }} />
       <div style={{ position: "absolute", inset: borderWidth, borderRadius: Math.max(borderRadius - borderWidth, 0), background: "#0f0b17", opacity: 0.22, pointerEvents: "none", zIndex: 4 }} />
 
       <div style={{ position: "relative", zIndex: 5, width: "100%", height: "100%", boxSizing: "border-box", padding: "34px 26px 22px 26px", display: "flex", flexDirection: "column", color: "#FFFFFF" }}>
@@ -107,34 +147,71 @@ function PricingCard({ plan, title, price, bulletItems, glowColor }: PricingCard
 
         <div style={{ flex: 1 }} />
 
-        <button onClick={handleCheckout} disabled={loadingCheckout} style={{ alignSelf: "center", width: "78%", height: 44, borderRadius: 999, border: "1px solid rgba(255,255,255,0.85)", background: "#2583F5", color: "#FFFFFF", fontSize: 17, fontWeight: 700, cursor: loadingCheckout ? "default" : "pointer", opacity: loadingCheckout ? 0.7 : 1, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16)", fontFamily: "inherit" }}>
-          {loadingCheckout ? "Redirecting..." : "Get"}
+        <button onClick={ctaAction} disabled={loadingCheckout} style={ctaStyle}>
+          {loadingCheckout ? "Redirecting..." : ctaLabel}
         </button>
       </div>
     </div>
   )
 }
 
-export function ProPlanCard() {
+export function PricingCards() {
+  const [userPlan, setUserPlan] = React.useState<"pro" | "agency" | "none" | "loading">("loading")
+
+  React.useEffect(() => {
+    async function fetchPlan() {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        if (!sessionData.session?.user) { setUserPlan("none"); return }
+
+        const { data: sub } = await supabase
+          .from("subscriptions")
+          .select("subscription_status, trial_ends_at, plan")
+          .eq("user_id", sessionData.session.user.id)
+          .single()
+
+        if (!sub) { setUserPlan("none"); return }
+
+        const now = new Date()
+        const trialEndsAt = sub.trial_ends_at ? new Date(sub.trial_ends_at) : null
+        const isActive = sub.subscription_status === "active" || (trialEndsAt !== null && trialEndsAt > now)
+
+        if (isActive && sub.plan === "pro") setUserPlan("pro")
+        else if (isActive && (sub.plan === "agency" || sub.plan === "max")) setUserPlan("agency")
+        else setUserPlan("none")
+      } catch {
+        setUserPlan("none")
+      }
+    }
+    fetchPlan()
+  }, [])
+
   return (
-    <PricingCard
-      plan="pro"
-      title="Pro Plan -"
-      price="$35/mo"
-      glowColor="40 80 80"
-      bulletItems={["Professional Grade Videos", "Fully Automated Workflow", "Time Savings (Hours → Minutes)", "Instant Download and Ownership", "50 renders per week"]}
-    />
+    <>
+      <PricingCard
+        plan="pro"
+        title="Pro Plan -"
+        price="$35/mo"
+        glowColor="40 80 80"
+        bulletItems={["Professional Grade Videos", "Fully Automated Workflow", "Time Savings (Hours → Minutes)", "Instant Download and Ownership", "50 renders per week"]}
+        userPlan={userPlan}
+      />
+      <PricingCard
+        plan="agency"
+        title="Agency -"
+        price="$99.95/mo"
+        glowColor="210 90 65"
+        bulletItems={["Unlimited video credits", "Best for agencies and high-volume creators", "Create more client videos without daily limits", "Priority render access", "Commercial usage and full video ownership"]}
+        userPlan={userPlan}
+      />
+    </>
   )
 }
 
+// Keep old named exports for backwards compat in case they're used elsewhere
+export function ProPlanCard() {
+  return <PricingCards />
+}
 export function AgencyPlanCard() {
-  return (
-    <PricingCard
-      plan="agency"
-      title="Agency -"
-      price="$99.95/mo"
-      glowColor="210 90 65"
-      bulletItems={["Unlimited video credits", "Best for agencies and high-volume creators", "Create more client videos without daily limits", "Priority render access", "Commercial usage and full video ownership"]}
-    />
-  )
+  return null
 }

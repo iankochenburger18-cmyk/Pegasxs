@@ -63,11 +63,7 @@ export default function Nav() {
             <a href="/login" data-mobile="hide">Login</a>
           )
         )}
-        {loaded && isLoggedIn && hasActiveSub && (
-          <a href="/cancel" data-mobile="hide" style={{ color: "var(--ink-mute)" }}>
-            Cancel plan
-          </a>
-        )}
+
         <a href={ctaHref} className="cta">
           {ctaLabel} <span className="arr">→</span>
         </a>
