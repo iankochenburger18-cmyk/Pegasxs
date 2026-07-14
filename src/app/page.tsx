@@ -1,7 +1,6 @@
 "use client"
 import Nav from "@/components/Nav"
 import { PricingCards } from "@/components/PricingCards"
-import { PricingCards } from "@/components/PricingCards"
 import { useEffect } from "react"
 
 export default function HomePage() {
