@@ -262,19 +262,6 @@ export default function HomePage() {
           <div className="pricing-grid">
             <PricingCards />
           </div>
-              <div className="price">$150<em> / mo</em></div>
-              <p className="tag">For studios shipping in motion. <em>Built to scale.</em></p>
-              <ul>
-                <li><em>Unlimited</em> renders</li>
-                <li>No weekly cap</li>
-                <li>Priority GPU queue</li>
-                <li>4K MP4 export</li>
-                <li>Brand kits &amp; team libraries</li>
-                <li>Dedicated success partner</li>
-              </ul>
-              <a href="/signup" className="btn">Upgrade to Max <span className="arrow">→</span></a>
-            </div>
-          </div>
         </div>
       </section>
 
