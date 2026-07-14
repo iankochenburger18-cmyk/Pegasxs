@@ -18,6 +18,25 @@ export default function SignupPage() {
       if (error) { setMessage(error.message); setMessageType("error"); setLoading(false); return }
       if (!data.user) { setMessage("No user created."); setMessageType("error"); setLoading(false); return }
       if (data.session) {
+        // Check for pending plan from pricing page
+        const pendingPlan = sessionStorage.getItem("pending_plan")
+        if (pendingPlan === "pro" || pendingPlan === "agency") {
+          sessionStorage.removeItem("pending_plan")
+          setMessage("Redirecting to checkout...")
+          setMessageType("success")
+          try {
+            const response = await fetch("https://api.pegasxs.com/create-checkout-session", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}` },
+              body: JSON.stringify({ plan: pendingPlan }),
+            })
+            const result = await response.json()
+            if (response.ok && result.url) {
+              window.location.href = result.url
+              return
+            }
+          } catch {}
+        }
         router.push("/studio")
       } else {
         setMessage("Check your email to confirm your account, then sign in.")

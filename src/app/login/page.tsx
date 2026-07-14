@@ -17,6 +17,27 @@ export default function LoginPage() {
       const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: password.trim() })
       if (error) { setMessage(error.message); setMessageType("error"); setLoading(false); return }
       if (!data.session) { setMessage("No active session returned."); setMessageType("error"); setLoading(false); return }
+
+      // Check for pending plan from pricing page
+      const pendingPlan = sessionStorage.getItem("pending_plan")
+      if (pendingPlan === "pro" || pendingPlan === "agency") {
+        sessionStorage.removeItem("pending_plan")
+        setMessage("Redirecting to checkout...")
+        setMessageType("success")
+        try {
+          const response = await fetch("https://api.pegasxs.com/create-checkout-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session.access_token}` },
+            body: JSON.stringify({ plan: pendingPlan }),
+          })
+          const result = await response.json()
+          if (response.ok && result.url) {
+            window.location.href = result.url
+            return
+          }
+        } catch {}
+      }
+
       router.push("/studio")
     } catch (err: any) {
       setMessage(err?.message || "Unexpected error"); setMessageType("error")

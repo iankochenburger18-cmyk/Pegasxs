@@ -62,14 +62,25 @@ function PricingCard({ plan, title, price, bulletItems, glowColor, userPlan }: P
   async function handleCheckout() {
     setLoadingCheckout(true)
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError || !sessionData.session?.access_token) {
-        alert("You must be logged in.")
-        setLoadingCheckout(false); return
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (!sessionData.session?.access_token) {
+        // Not logged in — save intent and redirect to login
+        sessionStorage.setItem("pending_plan", plan)
+        window.location.href = "/login"
+        return
       }
+      await triggerCheckout(sessionData.session.access_token)
+    } catch (err: any) {
+      alert(err?.message || "Checkout failed.")
+      setLoadingCheckout(false)
+    }
+  }
+
+  async function triggerCheckout(token: string) {
+    try {
       const response = await fetch("https://api.pegasxs.com/create-checkout-session", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session.access_token}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ plan }),
       })
       const result = await response.json()
