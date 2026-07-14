@@ -1,5 +1,7 @@
 "use client"
 import Nav from "@/components/Nav"
+import { PricingCards } from "@/components/PricingCards"
+import { PricingCards } from "@/components/PricingCards"
 import { useEffect } from "react"
 
 export default function HomePage() {
@@ -259,21 +261,8 @@ export default function HomePage() {
             <p>Start free. Scale when the work does. Every plan ships with brand memory, real-time render, and unlimited exports.</p>
           </div>
           <div className="pricing-grid">
-            <div className="plan reveal">
-              <div className="plan-top"><div className="plan-name">Pro</div></div>
-              <div className="price">$35<em> / mo</em></div>
-              <p className="tag">For working creators. <em>The standard.</em></p>
-              <ul>
-                <li><em>50</em> renders / week</li>
-                <li>4K MP4 · ProRes export</li>
-                <li>Cinema palettes &amp; presets</li>
-                <li>Private project library</li>
-                <li>~<em>$0.15</em> avg per video</li>
-              </ul>
-              <a href="/signup" className="btn btn-ghost">Start with Pro <span className="arrow">→</span></a>
-            </div>
-            <div className="plan dark reveal">
-              <div className="plan-top"><div className="plan-name">Max</div><span className="badge">most chosen</span></div>
+            <PricingCards />
+          </div>
               <div className="price">$150<em> / mo</em></div>
               <p className="tag">For studios shipping in motion. <em>Built to scale.</em></p>
               <ul>
