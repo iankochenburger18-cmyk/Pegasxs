@@ -102,6 +102,8 @@ function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signe
     setFullscreen(true)
     window.dispatchEvent(new Event("pegasxs-video-open"))
   }
+
+  async function handleDownload() {
     if (!url || downloading) return
     setDownloading(true)
     try {
