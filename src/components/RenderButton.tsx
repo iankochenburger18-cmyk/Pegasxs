@@ -76,7 +76,32 @@ function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signe
     fetchUrl()
   }, [renderId, url])
 
-  async function handleDownload() {
+  async function handleFullscreen() {
+    // Re-fetch fresh signed URL before opening fullscreen
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      if (token) {
+        const res = await fetch("https://api.pegasxs.com/get-render-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ render_id: renderId }),
+        })
+        const data = await res.json()
+        if (data.render?.video_path) {
+          const urlRes = await fetch("https://api.pegasxs.com/get-video-url", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ video_path: data.render.video_path }),
+          })
+          const urlData = await urlRes.json()
+          if (urlData.signedUrl) setUrl(urlData.signedUrl)
+        }
+      }
+    } catch {}
+    setFullscreen(true)
+    window.dispatchEvent(new Event("pegasxs-video-open"))
+  }
     if (!url || downloading) return
     setDownloading(true)
     try {
@@ -111,7 +136,7 @@ function VideoBubble({ renderId, signedUrl }: { renderId: string | number; signe
     <>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div
-          onClick={() => { setFullscreen(true); window.dispatchEvent(new Event("pegasxs-video-open")) }}
+          onClick={() => handleFullscreen()}
           style={{
             position: "relative", width: 90, height: 140,
             borderRadius: 12, overflow: "hidden",
@@ -411,6 +436,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
 
     setLoading(true); setMessage("")
     if (!hasSubmitted) { setHasSubmitted(true); onFirstSubmit?.() }
+    setScript(""); if (textareaRef.current) textareaRef.current.style.height = "26px"
 
     setMessages((prev) => [...prev, { type: "user", text: cleanScript, id: uid() }])
 
@@ -464,6 +490,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
 
     setLoading(true); setMessage("")
     if (!hasSubmitted) { setHasSubmitted(true); onFirstSubmit?.() }
+    setScript(""); if (textareaRef.current) textareaRef.current.style.height = "26px"
 
     setMessages((prev) => [...prev, { type: "user", text: cleanScript, id: uid() }])
 
