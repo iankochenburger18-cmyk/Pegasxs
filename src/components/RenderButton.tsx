@@ -16,7 +16,7 @@ const STATUS_STEPS = [
 
 type ChatMessage =
   | { type: "user"; text: string; id: string }
-  | { type: "status"; steps: string[]; activeStep: number; done: boolean; id: string }
+  | { type: "status"; steps: string[]; activeStep: number; done: boolean; error?: string; id: string }
   | { type: "video"; renderId: string | number; signedUrl: string | null; id: string }
   | { type: "error"; text: string; id: string }
 
@@ -332,11 +332,11 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
     statusTimerRef.current = setTimeout(advance, STATUS_STEPS[0].duration)
   }
 
-  function stopStatusAnimation(msgId: string, done: boolean) {
+  function stopStatusAnimation(msgId: string, done: boolean, error?: string) {
     if (statusTimerRef.current) clearTimeout(statusTimerRef.current)
     activeStatusIdRef.current = null
     setMessages((prev) => prev.map((m) =>
-      m.id === msgId && m.type === "status" ? { ...m, done } : m
+      m.id === msgId && m.type === "status" ? { ...m, done, error } : m
     ))
   }
 
@@ -361,14 +361,10 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
     function handleRenderFailed() {
       if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current)
       const statusMsg = activeStatusIdRef.current
-      if (statusMsg) stopStatusAnimation(statusMsg, false)
+      if (statusMsg) stopStatusAnimation(statusMsg, false, "Something went wrong. Please try again.")
       setLoading(false)
       setMessage("")
       setAdjustMode(false)
-      setMessages((prev) => [
-        ...prev,
-        { type: "error", text: "Something went wrong. Please try again.", id: uid() },
-      ])
     }
 
     function handleRenderStarted(e: Event) {
@@ -465,13 +461,11 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
       const result = await response.json()
 
       if (response.status === 429 && result.limitReached) {
-        stopStatusAnimation(statusId, false)
-        setMessages((prev) => [...prev, { type: "error", text: result.error || "Weekly render limit reached.", id: uid() }])
+        stopStatusAnimation(statusId, false, result.error || "Weekly render limit reached.")
         setLoading(false); return
       }
       if (!response.ok || !result.render_id) {
-        stopStatusAnimation(statusId, false)
-        setMessages((prev) => [...prev, { type: "error", text: result.error || "Adjustment failed.", id: uid() }])
+        stopStatusAnimation(statusId, false, result.error || "Adjustment failed.")
         setLoading(false); return
       }
 
@@ -480,8 +474,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
       setScript("")
       if (textareaRef.current) textareaRef.current.style.height = "26px"
     } catch (err: any) {
-      stopStatusAnimation(statusId, false)
-      setMessages((prev) => [...prev, { type: "error", text: err?.message || "Unknown error", id: uid() }])
+      stopStatusAnimation(statusId, false, err?.message || "Unknown error")
       setLoading(false)
     }
   }
@@ -509,24 +502,21 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
     try {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
       if (sessionError) {
-        stopStatusAnimation(statusId, false)
-        setMessages((prev) => [...prev, { type: "error", text: "Session error: " + sessionError.message, id: uid() }])
+        stopStatusAnimation(statusId, false, "Session error: " + sessionError.message)
         setLoading(false); return
       }
 
       const token = sessionData.session?.access_token
       const user = sessionData.session?.user
       if (!token || !user) {
-        stopStatusAnimation(statusId, false)
-        setMessages((prev) => [...prev, { type: "error", text: "You must be logged in.", id: uid() }])
+        stopStatusAnimation(statusId, false, "You must be logged in.")
         setLoading(false); return
       }
 
       const { data: subscription, error: subError } = await supabase
         .from("subscriptions").select("subscription_status, trial_ends_at").eq("user_id", user.id).single()
       if (subError || !subscription) {
-        stopStatusAnimation(statusId, false)
-        setMessages((prev) => [...prev, { type: "error", text: "No subscription record found.", id: uid() }])
+        stopStatusAnimation(statusId, false, "No subscription record found.")
         setLoading(false); return
       }
 
@@ -535,8 +525,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
       const hasActiveSubscription = subscription.subscription_status === "active"
       const hasActiveTrial = trialEndsAt !== null && trialEndsAt > now
       if (!hasActiveSubscription && !hasActiveTrial) {
-        stopStatusAnimation(statusId, false)
-        setMessages((prev) => [...prev, { type: "error", text: "Your free trial expired or you have no active subscription.", id: uid() }])
+        stopStatusAnimation(statusId, false, "Your free trial expired or you have no active subscription.")
         setLoading(false); return
       }
 
@@ -572,13 +561,11 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
       const result = await response.json()
 
       if (response.status === 429 && result.limitReached) {
-        stopStatusAnimation(statusId, false)
-        setMessages((prev) => [...prev, { type: "error", text: result.error || "Weekly render limit reached.", id: uid() }])
+        stopStatusAnimation(statusId, false, result.error || "Weekly render limit reached.")
         setLoading(false); return
       }
       if (!response.ok || !result.render_id) {
-        stopStatusAnimation(statusId, false)
-        setMessages((prev) => [...prev, { type: "error", text: result.error || "Request failed", id: uid() }])
+        stopStatusAnimation(statusId, false, result.error || "Request failed")
         setLoading(false); return
       }
 
@@ -589,8 +576,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
       setUploadedImages([])
       if (textareaRef.current) textareaRef.current.style.height = "26px"
     } catch (err: any) {
-      stopStatusAnimation(statusId, false)
-      setMessages((prev) => [...prev, { type: "error", text: err?.message || "Unknown error", id: uid() }])
+      stopStatusAnimation(statusId, false, err?.message || "Unknown error")
       setLoading(false)
     }
   }
@@ -625,7 +611,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
         }
       `}</style>
 
-      {messages.length > 0 && !videoFullscreen && (
+      {messages.length > 0 && (
         <div style={{
           position: "fixed",
           top: 0, left: 0, right: 0,
@@ -679,7 +665,19 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
                       gap: 8,
                       minWidth: 200,
                     }}>
-                      {msg.done ? (
+                      {msg.error ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{
+                            width: 16, height: 16, borderRadius: "50%", flexShrink: 0,
+                            background: "#ef4444", color: "#fff",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 11, fontWeight: 700, lineHeight: 1,
+                          }}>!</span>
+                          <span style={{ color: "#ef4444", fontFamily: "Inter, sans-serif", fontSize: 14 }}>
+                            {msg.error}
+                          </span>
+                        </div>
+                      ) : msg.done ? (
                         <span style={{ color: "var(--ink-soft)", fontFamily: "Inter, sans-serif", fontSize: 14 }}>
                           ✓ Video ready
                         </span>
