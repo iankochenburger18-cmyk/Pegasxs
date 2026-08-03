@@ -74,8 +74,8 @@ export default function OnboardingStepper() {
   ]
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", boxSizing: "border-box" }}>
-      <div style={{ width: "100%", maxWidth: 520, borderRadius: 28, border: "1px solid rgba(255,255,255,0.08)", background: "linear-gradient(180deg, rgba(14,14,18,0.96) 0%, rgba(10,10,14,0.96) 100%)", boxShadow: "0 30px 80px rgba(0,0,0,0.45)", padding: 32, color: "white", fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "rgba(20,18,14,0.35)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", boxSizing: "border-box" }}>
+      <div style={{ width: "100%", maxWidth: 520, borderRadius: 24, border: "1px solid var(--line)", background: "var(--paper)", boxShadow: "0 30px 80px rgba(0,0,0,0.14)", padding: 32, color: "var(--ink)", fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
 
         {/* Step dots */}
         <div style={{ display: "flex", alignItems: "center", marginBottom: 28 }}>
@@ -84,18 +84,25 @@ export default function OnboardingStepper() {
             const isComplete = currentStep > step
             return (
               <React.Fragment key={step}>
-                <button onClick={() => setCurrentStep(step)} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", background: isActive || isComplete ? "#5B2EFF" : "#232323", color: isActive || isComplete ? "#ffffff" : "#b0b0b0", flexShrink: 0, transition: "all 0.2s ease" }}>
+                <button onClick={() => setCurrentStep(step)} style={{
+                  width: 32, height: 32, borderRadius: "50%", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  border: isActive ? "none" : isComplete ? "none" : "1px solid var(--line-strong)",
+                  background: isComplete ? "#22c55e" : isActive ? "var(--ink)" : "var(--paper-deep)",
+                  color: isComplete || isActive ? "var(--paper)" : "var(--ink-mute)",
+                  flexShrink: 0, transition: "all 0.2s ease",
+                }}>
                   {isComplete ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 13L9 17L19 7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   ) : isActive ? (
-                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: "white" }} />
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--paper)" }} />
                   ) : (
-                    <span style={{ fontSize: 13, fontWeight: 700 }}>{step}</span>
+                    <span style={{ fontSize: 13, fontWeight: 500, fontFamily: "Inter, sans-serif" }}>{step}</span>
                   )}
                 </button>
                 {index < totalSteps - 1 && (
-                  <div style={{ flex: 1, height: 2, marginInline: 10, background: "rgba(255,255,255,0.22)", position: "relative", overflow: "hidden", borderRadius: 99 }}>
-                    <div style={{ position: "absolute", inset: 0, width: currentStep > step ? "100%" : "0%", background: "#5B2EFF", transition: "width 0.25s ease" }} />
+                  <div style={{ flex: 1, height: 1, marginInline: 10, background: "var(--line)", position: "relative", overflow: "hidden", borderRadius: 99 }}>
+                    <div style={{ position: "absolute", inset: 0, width: currentStep > step ? "100%" : "0%", background: "var(--ink)", transition: "width 0.25s ease" }} />
                   </div>
                 )}
               </React.Fragment>
@@ -105,10 +112,14 @@ export default function OnboardingStepper() {
 
         {/* Step content */}
         <div style={{ minHeight: 180 }}>
-          <h2 style={{ margin: 0, marginBottom: 12, fontSize: 34, lineHeight: 1.05, fontWeight: 700, letterSpacing: "-0.04em", color: "#ffffff" }}>
-            {stepContent[currentStep - 1].title}
+          <h2 style={{ margin: 0, marginBottom: 12, fontSize: 32, lineHeight: 1.15, fontWeight: 400, letterSpacing: "-0.01em", color: "var(--ink)", fontFamily: "'Instrument Serif', Georgia, serif" }}>
+            {currentStep === 1 ? (
+              <>Welcome to <em style={{ fontStyle: "italic" }}>pegasxs</em></>
+            ) : (
+              stepContent[currentStep - 1].title
+            )}
           </h2>
-          <p style={{ margin: 0, marginBottom: currentStep === 3 ? 18 : 0, color: "rgba(255,255,255,0.76)", fontSize: 16, lineHeight: 1.6 }}>
+          <p style={{ margin: 0, marginBottom: currentStep === 3 ? 18 : 0, color: "var(--ink-soft)", fontSize: 16, lineHeight: 1.6, fontFamily: "Inter, sans-serif" }}>
             {stepContent[currentStep - 1].body}
           </p>
           {currentStep === 3 && (
@@ -116,20 +127,20 @@ export default function OnboardingStepper() {
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               placeholder="Your nickname"
-              style={{ width: "100%", height: 52, borderRadius: 16, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)", color: "white", padding: "0 16px", fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+              style={{ width: "100%", height: 50, borderRadius: 14, border: "1px solid var(--line-strong)", background: "var(--paper-deep)", color: "var(--ink)", padding: "0 16px", fontSize: 16, outline: "none", boxSizing: "border-box", fontFamily: "Inter, sans-serif" }}
             />
           )}
         </div>
 
-        <div style={{ minHeight: 22, color: "#ff8f8f", fontSize: 14, marginTop: 8 }}>{message}</div>
+        <div style={{ minHeight: 22, color: "#ef4444", fontSize: 14, marginTop: 8, fontFamily: "Inter, sans-serif" }}>{message}</div>
 
         <div style={{ display: "flex", justifyContent: currentStep === 1 ? "flex-end" : "space-between", alignItems: "center", marginTop: 12 }}>
           {currentStep !== 1 && (
-            <button onClick={goBack} disabled={saving} style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.68)", fontSize: 15, fontWeight: 500, cursor: "pointer", padding: "10px 0", fontFamily: "inherit" }}>
+            <button onClick={goBack} disabled={saving} style={{ border: "none", background: "transparent", color: "var(--ink-mute)", fontSize: 15, fontWeight: 500, cursor: "pointer", padding: "10px 0", fontFamily: "Inter, sans-serif" }}>
               Back
             </button>
           )}
-          <button onClick={goNext} disabled={saving} style={{ minWidth: 110, height: 46, borderRadius: 999, border: "none", background: "#5B2EFF", color: "white", fontSize: 16, fontWeight: 600, cursor: saving ? "default" : "pointer", padding: "0 22px", boxShadow: "0 12px 28px rgba(91,46,255,0.32)", fontFamily: "inherit" }}>
+          <button onClick={goNext} disabled={saving} style={{ minWidth: 110, height: 46, borderRadius: 999, border: "1px solid var(--line-strong)", background: "var(--ink)", color: "var(--paper)", fontSize: 15, fontWeight: 500, cursor: saving ? "default" : "pointer", padding: "0 22px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontFamily: "Inter, sans-serif", transition: "all 0.2s ease" }}>
             {saving ? "Saving..." : currentStep === totalSteps ? "Complete" : "Next"}
           </button>
         </div>
