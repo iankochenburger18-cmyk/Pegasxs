@@ -386,7 +386,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
   function autoResize() {
     const el = textareaRef.current
     if (!el) return
-    el.style.height = "26px"
+    el.style.height = "22px"
     el.style.height = Math.min(el.scrollHeight, 200) + "px"
   }
 
@@ -434,7 +434,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
 
     setLoading(true); setMessage("")
     if (!hasSubmitted) { setHasSubmitted(true); onFirstSubmit?.() }
-    setScript(""); if (textareaRef.current) textareaRef.current.style.height = "26px"
+    setScript(""); if (textareaRef.current) textareaRef.current.style.height = "22px"
 
     setMessages((prev) => [...prev, { type: "user", text: cleanScript, id: uid() }])
 
@@ -472,7 +472,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
       window.dispatchEvent(new CustomEvent("pegasxs-render-started", { detail: { render_id: result.render_id } }))
       startPolling(result.render_id)
       setScript("")
-      if (textareaRef.current) textareaRef.current.style.height = "26px"
+      if (textareaRef.current) textareaRef.current.style.height = "22px"
     } catch (err: any) {
       stopStatusAnimation(statusId, false, err?.message || "Unknown error")
       setLoading(false)
@@ -485,7 +485,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
 
     setLoading(true); setMessage("")
     if (!hasSubmitted) { setHasSubmitted(true); onFirstSubmit?.() }
-    setScript(""); if (textareaRef.current) textareaRef.current.style.height = "26px"
+    setScript(""); if (textareaRef.current) textareaRef.current.style.height = "22px"
 
     setMessages((prev) => [...prev, { type: "user", text: cleanScript, id: uid() }])
 
@@ -574,7 +574,7 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
       startPolling(result.render_id)
       setScript("")
       setUploadedImages([])
-      if (textareaRef.current) textareaRef.current.style.height = "26px"
+      if (textareaRef.current) textareaRef.current.style.height = "22px"
     } catch (err: any) {
       stopStatusAnimation(statusId, false, err?.message || "Unknown error")
       setLoading(false)
@@ -806,13 +806,13 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
         )}
 
         <div style={{
-          position: "relative", width: "100%", minHeight: 64,
+          position: "relative", width: "100%", minHeight: 52,
           borderRadius: 9999,
           border: adjustMode ? "1.5px solid #22c55e" : "1.5px solid var(--ink)",
           background: "var(--paper)",
           boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
           display: "flex", alignItems: "center",
-          paddingLeft: 60, paddingRight: 78, paddingTop: 18, paddingBottom: 18,
+          paddingLeft: 50, paddingRight: 64, paddingTop: 12, paddingBottom: 12,
           transition: "border-color 0.2s ease",
         }}>
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileSelect} style={{ display: "none" }} />
@@ -823,8 +823,8 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
               disabled={loading || uploading || uploadedImages.length >= MAX_IMAGES}
               aria-label="Upload images"
               style={{
-                position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-                width: 36, height: 36, borderRadius: "50%", border: "none",
+                position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
+                width: 30, height: 30, borderRadius: "50%", border: "none",
                 background: "transparent", color: "var(--ink-mute)",
                 cursor: uploadedImages.length >= MAX_IMAGES ? "not-allowed" : "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
@@ -832,9 +832,9 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
               }}
             >
               {uploading ? (
-                <span style={{ fontSize: 18, fontWeight: 700 }}>…</span>
+                <span style={{ fontSize: 16, fontWeight: 700 }}>…</span>
               ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
                   <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
@@ -842,8 +842,8 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
           )}
 
           {adjustMode && (
-            <div style={{ position: "absolute", left: 18, top: "50%", transform: "translateY(-50%)", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <div style={{ position: "absolute", left: 15, top: "50%", transform: "translateY(-50%)", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -859,10 +859,10 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
             rows={1}
             disabled={loading}
             style={{
-              width: "100%", height: 26, minHeight: 26, maxHeight: 200,
+              width: "100%", height: 22, minHeight: 22, maxHeight: 180,
               border: "none", outline: "none", resize: "none", overflowY: "auto",
               background: "transparent", color: "var(--ink)",
-              fontSize: 18, lineHeight: "26px",
+              fontSize: 16, lineHeight: "22px",
               fontFamily: "Inter, sans-serif", padding: 0,
             }}
           />
@@ -872,8 +872,8 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
             disabled={loading}
             aria-label={loading ? "Rendering" : adjustMode ? "Apply adjustment" : "Generate video"}
             style={{
-              position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-              width: 46, height: 46, borderRadius: "50%",
+              position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+              width: 38, height: 38, borderRadius: "50%",
               border: "1px solid var(--line-strong)",
               background: loading ? "var(--paper-deep)" : adjustMode ? "#22c55e" : "var(--ink)",
               color: loading ? "var(--ink)" : "var(--paper)",
@@ -884,9 +884,9 @@ export default function RenderButton({ onFirstSubmit }: { onFirstSubmit?: () => 
             }}
           >
             {loading ? (
-              <span style={{ fontSize: 20, lineHeight: 1, fontWeight: 700 }}>…</span>
+              <span style={{ fontSize: 17, lineHeight: 1, fontWeight: 700 }}>…</span>
             ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M12 19V5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 <path d="M6 11L12 5L18 11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
